@@ -3,7 +3,6 @@
 #endif
 
 #include "win32lib.hh"
-#include <iostream>
 
 // Helpers
 // EnumProc for IgnoreShowDesktop
