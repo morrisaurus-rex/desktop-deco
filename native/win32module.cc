@@ -1,3 +1,8 @@
+/*
+    Native library to replicate some aspects of BrowserWindow({type: 'desktop'}) for win32 platforms.
+    Note: Desktop Gadgets was deprecated in favour of live tiles for Windows 7+ so the implementation will be a bit hacky
+*/
+
 #include <napi.h>
 #include <windows.h>
 #include "win32lib.hh"

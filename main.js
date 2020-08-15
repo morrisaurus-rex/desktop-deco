@@ -1,75 +1,80 @@
 // main.js
 'use-strict'
 
-const { app, BrowserWindow, Tray, Menu } = require('electron');
-const electron = require('electron');
-
+const { app, Tray, Menu } = require('electron');
 const os = require('os');
 const isWin32 = os.platform() === 'win32';
+
+// Just in case we want to implement features that require native binaries
 var nativeaddon = null;
 if (isWin32) {
     nativeaddon = require('bindings')('win32lib');
 }
 
-var appIcon = null;
+// Pages split into their own JS files
+const Settings = require('./SettingsWindow.js');
+const WidgetLayer = require('./WidgetLayer.js');
+
+// IPC protocol
+const IpcManager = require('./IpcManager.js');
+
+// Global handles
+let ipcManager = null;
+let homePage = null;
+let appIcon = null;
+let widgetLayer = null;
 
 function raiseNotReady() {
     return new Exception("App not ready");
 }
 
 function createTrayMenu() {
-    appIcon  = new Tray('./assets/appicon.png');
+    let tray  = new Tray('./assets/appicon.png');
     const cxtMenu = Menu.buildFromTemplate([
         {
             label: "Quit",
-            role: "quit"
+            role: 'quit'
         },
         {
-            label: "Settings"
+            label: "Settings",
+            click: (menuitem, browserWindow, event) => {
+                if (browserWindow == homePage) return;
+                homePage.show();
+            }
         },
         {
-            label: "Load Desktop..."
+            label: "Load Decorations"
         },
         {
-            label: "Dev",
-            role: "toggleDevTools"
-        }
-    ]);
-    appIcon.setContextMenu(cxtMenu);
-    appIcon.setTitle("Desktop Deco")
-}
-
-function loadDeco(filepath) {
-    if (!app.isReady()) {
-        return raiseNotReady();
-    }
-    else {
-        let {width, height} = electron.screen.getPrimaryDisplay().workAreaSize;
-        let windowProps = {
-            frame: false,
-            transparent: true,
-            width,
-            height,
-            focusable: true,
-            resizable: false,
-            type: (isWin32) ? 'normal': 'desktop',
-            webPreferences: {
-                nodeIntegration: true
+            label: "Widget Dev Tools",
+            click: (menuitem, browserWindow, event) => {
+                if (widgetLayer.webContents.isDevToolsOpened()) {
+                    widgetLayer.webContents.closeDevTools()
+                    widgetLayer.setFocusable(false);
+                } else {
+                    widgetLayer.setFocusable(true);
+                    widgetLayer.webContents.openDevTools({mode: 'right'});
+                    widgetLayer.focus();
+                }
             }
         }
-
-        let mainWindow = new BrowserWindow(windowProps);
-        // mainWindow.setIgnoreMouseEvents(true);
-        console.log(`Loading file: ${filepath}`)
-        mainWindow.loadFile(filepath);
-        mainWindow.show();
-/* 
-        if (isWin32) {
-            nativeaddon.setBottomMost(mainWindow.getNativeWindowHandle());
-        } */
-
-        let appTray = createTrayMenu();
-    }
+    ]);
+    tray.setContextMenu(cxtMenu);
+    tray.setToolTip("Desktop Deco");
+    return tray;
 }
 
-app.whenReady().then(()=>{loadDeco('./ui/test-overlay.html')})
+// Needed since we change default close behaviour of the settings page
+app.on('before-quit', () => {
+    homePage.close();
+    homePage.destroy();
+    widgetLayer.close();
+    widgetLayer.destroy();
+})
+
+app.whenReady().then(()=>{
+    appIcon = createTrayMenu();
+    homePage = Settings.createSettingsPage();
+    widgetLayer = WidgetLayer.createWidgetLayer();
+    ipcManager = new IpcManager.IpcManager(widgetLayer, homePage);
+});

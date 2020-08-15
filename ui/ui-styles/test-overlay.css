@@ -1,0 +1,25 @@
+body {
+    background-blend-mode: rgba(0, 0, 0, 0.0);
+}
+
+#widget-wrapper {
+    position: absolute;
+    bottom: 0px;
+    right: 0px;
+    padding-right: 10px;
+}
+
+#date {
+    position: absolute;
+    bottom: 0px;
+    right: 0px;
+    color: white;
+    font-size: 36px;
+    font-family: sans-serif;
+}
+
+#time {
+    font-family: sans-serif;
+    font-size: 100px;
+    color: rgba(255, 255, 255, 0.4);
+}
