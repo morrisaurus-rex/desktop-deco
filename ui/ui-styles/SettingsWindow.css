@@ -92,7 +92,7 @@ input {
 
 .settings-content {
     width: inherit;
-    font-family Quicksand-Light;
+    font-family: Quicksand-Light;
 }
 
 
@@ -101,7 +101,5 @@ button {
     background-color: rgb(40, 40, 45);
     color: white;
     padding: 5px;
-    border: outset;
-    border-width: 2px;
-    border-color: rgb(120, 120, 120)
+    border: none;
 }
