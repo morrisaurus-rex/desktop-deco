@@ -50,11 +50,8 @@ function createTrayMenu() {
             click: (menuitem, browserWindow, event) => {
                 if (widgetLayer.webContents.isDevToolsOpened()) {
                     widgetLayer.webContents.closeDevTools()
-                    widgetLayer.setFocusable(false);
                 } else {
-                    widgetLayer.setFocusable(true);
-                    widgetLayer.webContents.openDevTools({mode: 'right'});
-                    widgetLayer.focus();
+                    widgetLayer.webContents.openDevTools({mode: 'detach'});
                 }
             }
         }
