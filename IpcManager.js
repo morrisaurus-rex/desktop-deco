@@ -4,7 +4,7 @@ const { ipcMain, BrowserWindow, dialog, app } = require('electron');
 // IpcManager instances will rebind 'this' on construct
 'use-strict'
 
-const listeners = [
+const ipcHandlers = [
     {
         eventName: 'click-test',
         eventHandler: function(event, arg) {
@@ -28,10 +28,10 @@ const listeners = [
                     { name: "HTML", extensions: ["html"]}
                 ]
             }
-            let dirpath = dialog.showOpenDialogSync(BrowserWindow.fromWebContents(event.sender), dialogParams)[0];
-            if (dirpath == undefined) return;
-            event.reply('ipc-debug', `Attempting to load file: "${dirpath}"`);
-            this.widgetLayer.loadFile(dirpath);
+            let dirs = dialog.showOpenDialogSync(BrowserWindow.fromWebContents(event.sender), dialogParams);
+            if (dirs == undefined) return;
+            event.reply('ipc-debug', `Attempting to load file: "${dirs[0]}"`);
+            this.widgetLayer.loadFile(dirs[0]);
         }
     },
     {
@@ -46,8 +46,8 @@ class IpcManager {
     constructor(WidgetLayer, SettingsWindow) {
         this.widgetLayer = WidgetLayer;
         this.settingsWindow = SettingsWindow;
-        for (let a = 0; a < listeners.length; a++) {
-            ipcMain.on(listeners[a].eventName, listeners[a].eventHandler.bind(this));
+        for (let a = 0; a < ipcHandlers.length; a++) {
+            ipcMain.on(ipcHandlers[a].eventName, ipcHandlers[a].eventHandler.bind(this));
         }
     }
 }
