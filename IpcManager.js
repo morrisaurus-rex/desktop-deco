@@ -1,4 +1,5 @@
 const { ipcMain, BrowserWindow, dialog, app } = require('electron');
+let path = null; // Load when needed
 
 // List of all ipcRenderer messages to listen for
 // IpcManager instances will rebind 'this' on construct
@@ -38,6 +39,12 @@ const ipcHandlers = [
         eventName: 'quit-application',
         eventHandler: function(event, arg) {
             app.quit();
+        }
+    },
+    {
+        eventName: 'test-function',
+        eventHandler: function(event, arg) {
+            // Testing function for miscellaneous stuff
         }
     }
 ];
