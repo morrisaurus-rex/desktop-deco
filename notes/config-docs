@@ -1,0 +1,11 @@
+"savedLayouts"
+Array - Contains objects with information on user-configured collections of widgets.
+Each item contains the following properties:
+
+    "layoutName"
+    String - Name of the layout that will be referred to throughout the app
+    "widgets"
+    Array - contains the absolute filepath for the individual widgets contained in the layout
+
+"currentLayout"
+String - Name of the currently loaded layout
