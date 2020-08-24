@@ -33,26 +33,48 @@ function populateLayoutList(config) {
     if (layouts.length == 0) {
         let noLayouts = document.createElement('p');
         noLayouts.innerHTML = 'No layouts found';
-        layoutList.appendChild(noLayouts)
+        layoutList.appendChild(noLayouts);
+    } else {
+        for (let a = 0; a < layouts.length; a++) {
+            layoutList.appendChild(creatLayoutListItem());
+        }
     }
 }
-
+// Called by populateLayoutList
 function createLayoutListItem(layoutName) {
     let item = document.createElement('div');
     item.setAttribute('class', 'layout-list-item');
+    item.setAttribute('id', `item-${layoutName}`);
+    item.addEventListener('click', layoutListClick.bind(item, layoutName));
     
 }
-
+// Click handler for layout items
 function layoutListClick(layoutName ,event) {
-
+    if (this.classList.contains('layout-item-selected')) {
+        return;
+    }
+    for (let a = 0; a < layoutList.childNodes.length; a++) {
+        if (layoutList.childNodes[a].classList.contains('layout-item-selected')) {
+            layoutList.childNodes[a].classList.remove('layout-list-selected');
+        }
+    }
+    ipcRenderer.send('set-layout', layoutName);
 }
 
+// Event listener for picking a file
 button.addEventListener('click', (event) => {
     ipcRenderer.send('choose-file');
 });
 
+// IPC listener: fires when app sends a debug message
 ipcRenderer.on('ipc-debug', (event, arg) => {
     console.log('[IPC message]', arg);
+});
+
+// IPC listener: fires when app has set a new layout
+ipcRenderer.on('set-layout', (event, arg) => {
+    let item = document.querySelector(`#item-${arg}`);
+    item.classList.add('layout-item-selected');
 });
 
 closeButton.addEventListener('click', (event) => {
