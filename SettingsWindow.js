@@ -24,17 +24,5 @@ function createSettingsPage() {
     });
     return page;
 }
-// Note: BrowserWindow is not intended to be extended since it wraps native c++ classes
-class SettingsPage {
-    constructor() {
-        this.window = new BrowserWindow(WindowParams);
-        this.window.loadFile(PAGE_PATH);
-        this.window.on('ready-to-show', this.window.show);
-        this.window.on('close', event => {
-            event.preventDefault()
-            this.window.hide();
-        });
-    }
-}
 
 exports.createSettingsPage = createSettingsPage;

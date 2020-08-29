@@ -1,10 +1,21 @@
 "savedLayouts"
 Object - Each property is the name of the layout with the value being an Array of objects with the following schema:
 
-    "widgetName"
-    String - Given name for a widget
-    "widgetPath"
-    String - Filepath for the html file of the widget
+    layoutName : widgets
+    
+    "layoutName"
+    String - User defined name of the layout
+    "widgets"
+    Array - Contains configuration information on widgets used in its layout
+        
+        "name": String - name of the widget (look up in registeredWidgets to get filepath)
+        "x": Integer - X coordinate of the browser window
+        "y": Integer - Y coordinate of the browser window
+        "width": Integer - width of the browser window
+        "height": Integer - height of the browser window
 
 "currentLayout"
 String - Name of the currently loaded layout
+
+"registeredWidgets"
+Object - Each property is the user given name of a widget containing the path to its respective HTML file
