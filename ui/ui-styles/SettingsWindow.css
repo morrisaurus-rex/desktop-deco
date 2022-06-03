@@ -1,0 +1,110 @@
+@font-face {
+    font-family: Quicksand-Light;
+    src: url(../../assets/Quicksand/Quicksand-Light.ttf);
+}
+
+body {
+    background-color: rgb(15, 15, 15);
+    padding: 0px;
+    margin: 0px;
+    overflow-x: hidden;
+}
+
+#traffic-wrapper {
+    -webkit-app-region: drag;
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    background-color: rgb(40, 40, 40);
+}
+
+#traffic-buttons {
+    -webkit-app-region: no-drag;
+    display: flex;
+    flex-direction: row;
+    flex-shrink: 1;
+}
+
+#close-button:hover {
+    background-color: rgb(200, 200, 200);
+}
+
+input {
+    border-radius: 0.75em;
+    border-style: none;
+    height: 1.5em;
+    padding-left: 0.75em;
+}
+
+#debug-box {
+    position: absolute;
+    color: white;
+    bottom: 0px;
+    width: 100%;
+    font-family: sans-serif;
+    border-style: dashed;
+    border-color: white;
+}
+
+#content-box {
+    display: flex;
+    flex-direction: row;
+}
+
+#sidebar {
+    height: 100%;
+    flex-grow: 0;
+    flex-shrink: 0;
+}
+
+.sidebar-button {
+    padding: 20px;
+}
+
+.sidebar-button:hover {
+    background-color: rgb(30, 30, 35);
+}
+
+.sidebar-button img {
+    width: 60px;
+    height: 60px;
+}
+
+.settings-page {
+    flex-grow: 1;
+    visibility: hidden
+}
+
+.settings-container {
+    margin-left: 15px;
+}
+
+.vertical-container {
+    flex-direction: vertical;
+}
+
+.settings-heading {
+    width: inherit;
+    font-size: 48px;
+    font-family: Quicksand-Light;
+    color: white;
+    margin: 0px 15px 10px 0px;
+    padding-bottom: 5px;
+    border-bottom-color: rgb(40, 40, 40);
+    border-bottom-style: inset;
+    border-bottom-width: 2px;
+}
+
+.settings-content {
+    width: inherit;
+    font-family: Quicksand-Light;
+}
+
+
+button {
+    border-radius: 0.15em;
+    background-color: rgb(40, 40, 45);
+    color: white;
+    padding: 5px;
+    border: none;
+}

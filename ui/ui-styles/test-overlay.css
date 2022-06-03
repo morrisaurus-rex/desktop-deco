@@ -1,0 +1,45 @@
+body {
+    background-blend-mode: rgba(255, 255, 255, 0.15);
+    display: flex;
+    flex-direction: column;
+    border-width: 5px;
+    border-style: solid;
+    border-color: white;
+    box-sizing: border-box;
+    width: 100%;
+    height: 100%;
+    margin: 0;
+}
+
+.grid-cell {
+    flex-grow: 1;
+    border-width: 2px;
+    border-color: inherit;
+    border-style: solid;
+    box-sizing: border-box;
+    flex-basis: 6px;
+}
+
+.row-container {
+    display:flex;
+    flex-grow: 1;
+    flex-direction: row;
+    padding: 0px;
+    margin: 0px;
+    border-width: 0px;
+    border-color: inherit;
+    box-sizing: border-box;
+}
+
+a {
+    position: absolute;
+    text-align: center;
+    top: 50%;
+    left: 0%;
+    width: 100%;
+}
+ 
+html {
+    width: 100vw;
+    height: 100vh;
+}

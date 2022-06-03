@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+  	<head>
+    	<meta charset="UTF-8">
+    	<title>Settings</title>
+    	<meta http-equiv="Content-Security-Policy" content="script-src 'self' 'unsafe-inline';" />
+        <script defer src="./ui-scripts/SettingsWindow.js"></script>
+        <link rel="stylesheet" href="ui-styles/SettingsWindow.css">
+  	</head>
+	<body>
+		<div id="traffic-wrapper">
+			<div id="traffic-buttons">
+				<img id="close-button" src="../assets/close.svg" width="20" height="20">
+			</div>
+		</div>
+        <div id="content-box">
+            <div id="sidebar">
+                <div class="sidebar-button" id="sidebar-settings">
+                    <img src="../assets/build.svg">
+                </div>
+                <div class="sidebar-button">
+                    <img src="../assets/equalizer.svg">
+                </div>
+                <div class="sidebar-button">
+                    <img src="../assets/weekend.svg">
+                </div>
+                <div class="sidebar-button" id="sidebar-layouts">
+                    <img src="../assets/extension.svg">
+                </div>
+            </div>
+            <div class="vertical-container">
+                <div class="settings-page" id="landing-page">
+                    <div class="settings-container">
+                        <div class="settings-heading">
+                            Set File
+                        </div>
+                        <div class="settings-content">
+                            <button id="upload-button">Load File</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="settings-page" id="layouts-page">
+                    <div class="settings-container">
+                        <div class="settings-heading">
+                            Choose an existing layout
+                        </div>
+                        <div class="settings-content">
+                            <div id="layout-list">
+                                
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button id="exit-button">
+                Exit Application
+            </button>
+
+            <button id="test-button">
+                Test function
+            </button>
+		</div>
+  	</body>
+</html>
