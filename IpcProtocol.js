@@ -2,51 +2,66 @@ const { BrowserWindow, dialog, app } = require('electron');
 // List of all ipcRenderer messages to listen for
 // IpcManager instances will rebind 'this' on construct
 'use-strict'
-
-const ipcMainHandlers = [
-    {
-        eventName: 'click-test',
-        eventHandler: function(event, arg) {
-            console.log(`click recieved: ${arg}`);
+// Lists the possible IPC events that the main process can receive and their event handlers
+const ipcMainHandlersList = {
+    ClickTest: {
+        Message: "click-test",
+        Handler: function(event, arg) {
+            console.log(`click received: ${arg}`);
         }
     },
-    {
-        eventName: 'hide-window',
-        eventHandler: function(event, arg) {
+    HideWindow: {
+        Message: "hide-window",
+        Handler: function(event, arg) {
             BrowserWindow.fromWebContents(event.sender).hide();
         }
     },
-    {
-        eventName: 'choose-file',
-        eventHandler: function(event, arg) {
-            const dialogParams = {
-                title: "Choose HTML File",
+    ChooseFile: {
+        Message: "choose-file",
+        Handler: function(event, arg) {
+            const DialogParams = {
+                title: "Choose HTML FILE",
                 buttonLabel: "Select",
                 properties: ["openFile", "dontAddToRecent"],
-                filters: [
-                    { name: "HTML", extensions: ["html"]}
-                ]
+                filters: [{ name: "HTML", extensions: ["html"]}]
             }
             let dirs = dialog.showOpenDialogSync(BrowserWindow.fromWebContents(event.sender), dialogParams);
             if (dirs == undefined) return;
-            event.reply('file-added', `Attempting to load file: "${dirs[0]}"`);
-            this.widgetManager.addWidget(dirs[0]);
+            event.reply("file-added", `Attempting to load file: "${dirs[0]}"`);
+            this.AddWidget(dirs[0]);
         }
     },
-    {
-        eventName: 'quit-application',
-        eventHandler: function(event, arg) {
+    QuitApp: {
+        Message: "quit-application",
+        Handler: function(event, arg) {
             app.quit();
         }
     },
-    {
-        eventName: 'test-function',
-        eventHandler: function(event, arg) {
-            // Testing function for miscellaneous stuff
+    Test: {
+        Message: "test-function",
+        Handler: function(event, arg) {
+            console.log(`[IPC] "test-function" message sent`);
         }
     }
-];
+}
 
+/**
+ * List of events sent by {@link ipcMain}.
+ */
+const ipcMainEventList = {
+    // Tell widget layer to enable mouse events
+    EnableWidgets: "edit-mode-on",
+    // Tell widget layer to disable mouse events
+    DisableWidgets: "edit-mode-off",
+    // Tells the widget layer to load the sent layout data
+    LoadLayout: "load-layout",
+    // Tells the widget layer to clear everything
+    ClearLayout: "clear-layout",
+    // Tells the widget layer to move the given widget to the given xy coordinates
+    MoveWidget: "move-widget",
+    // Tells the widget layer to add a new widget
+    AddWidget: "add-widget"
+};
 
-
-exports.IpcList = ipcMainHandlers;
+exports.MainHandlers = ipcMainHandlersList;
+exports.MainEvents = ipcMainEventList;

@@ -1,4 +1,11 @@
-// main.js
+/*
+main.js
+Initialize the application:
+- Check for single instance
+- Load saved configuration if available
+- Determine initial state of application
+- Establish user settings page
+*/
 'use-strict'
 
 // Electron modules
@@ -20,13 +27,6 @@ const IpcProtocol = require('./IpcProtocol.js');
 // Program constants
 // -- File for storing application settings between sessions
 const APP_CONFIG = path.join(app.getPath('userData'), 'config.json');
-// -- Default configuration JSON
-const DEFAULT_CONFIG = {
-    LayoutDirectory: path.join(app.getPath('documents'), '/Desktop-Deco/layouts'),
-    StrictSecurity: true,
-    WidgetDirectory: path.join(app.getPath('documents'), '/Desktop-Deco/widgets'),
-    LastLayout: null
-};
 // individual items
 let settings;
 // Tray menu
