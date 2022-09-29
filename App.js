@@ -5,11 +5,13 @@ Define the application instance here:
 - Take ownership of any persistent Electron classes
 */
 
-const { BrowserWindow, app, ipcMain } = require("electron");
+const { BrowserWindow, app, ipcMain, Tray } = require("electron");
 const platform = require('os').platform;
 const path = require('path');
 const fs = require('fs');
 const fsPromises = require('fs/promises');
+// Native module for windows, mainly to make the widget layer ignore the normal "show desktop" behaviour
+const win32 = (platform() == "win32") ? require('./build/Release/win32.node'): null;
 
 const { MainEvents } = require("./IpcProcol.js");
 
@@ -45,29 +47,86 @@ const DEFAULT_CONFIG = {
 };
 
 /**
- * Widget layer is managed here. Use member functions as event handlers.
+ * Creates the application's tray menu.
+ * @param {ApplicationInstance} application An instance of the application.
+ * @returns The Electron {@link Tray} object.
+ */
+ function CreateTrayMenu(application) {
+    let tray  = new Tray('./assets/appicon.png');
+    const cxtMenu = Menu.buildFromTemplate([
+        {
+            label: 'Quit',
+            role: 'quit'
+        },
+        {
+            label: 'Settings',
+            click: function (menuitem, browserWindow, event) {
+                if (browserWindow == application.SettingsWindow) return;
+                application.SettingsWindow.show();
+            }
+        },
+        {
+            label: 'Open Developer Tools',
+            click: function (menuitem, browserWindow, event) {
+                console.log('Widget Dev Tools clicked');
+                application.SettingsWindow.webContents.openDevTools();
+            }
+        }
+    ]);
+    tray.setContextMenu(cxtMenu);
+    tray.setToolTip('Desktop Deco');
+    return tray;
+}
+
+/**
+ * Application manager.
  */
 class ApplicationInstance {
-    constructor() {
-        this.interactable = false;
-        this.window = new BrowserWindow(WindowProps);
+    /**
+     * Initialize an application instance. Supply the working directory with process.cwd().
+     * @param {fs.pathLike} workingDir Working directory of the application.
+     */
+    constructor(workingDir) {
+        this.SettingsWindow = new BrowserWindow({
+            width: 500,
+            height: 700,
+            frame: false,
+            webPreferences: {
+                nodeIntegration: true,
+                contextIsolation: false
+            },
+            devTools: true,
+            center: true
+        });
+        this.WorkingDir = workingDir;
+        this.SettingsWindow.loadFile(path.join(this.WorkingDir, "ui/SettingsWindow.html"));
+        this.TrayIcon = CreateTrayMenu(this);
+
+        this.Interactable = false;
+        this.AppWindow = new BrowserWindow(WindowProps);
+        if (platform() == "win32") win32.ignoreShowDesktop(this.AppWindow.getNativeWindowHandle());
+        this.AppWindow.loadFile(path.join(this.WorkingDir, "ui/WidgetPlane.html"));
         // Flag to allow async file reads for intial set up
-        this.starting = true;
+        this.Starting = true;
         // Start loading widgets from loaded layout
         if (fs.existsSync(DEFAULT_CONFIG.AppState)) {
             fsPromises.readFile(DEFAULT_CONFIG.AppState, {encoding: "utf8"}).then( data => {
                 this.AppConfig = JSON.parse(data);
                 this.starting = false;
-                if (this.AppConfig.LastLayoutpath) this.SetLayout(this.AppConfig.LastLayoutPath);
+                if (this.AppConfig.LastLayoutPath) this.SetLayout(this.AppConfig.LastLayoutPath);
             }).catch(error => {
                 console.log(error);
                 // Maybe make it emit an error event here and listen for it on main.js
             });
         } else {
             this.AppConfig = structuredClone(DEFAULT_CONFIG);
-            this.starting = false;
-            
+            this.Starting = false;
         }
+
+        for (let event of Object.keys(MainHandlers)) {
+            ipcMain.on(MainHandlers[event].Message, MainHandlers[event].Handler.bind(this));
+        }
+        this.AppWindow.show();
     }
     /**
      * Controls whether the widget plane will recieve mouse and keyboard events.
@@ -75,8 +134,8 @@ class ApplicationInstance {
      */
     ToggleEditing(event) {
         this.interactable = !this.interactable;
-        this.window.setEnabled(this.interactable);
-        this.window.setFocusable(this.interactable);
+        this.AppWindow.setEnabled(this.interactable);
+        this.AppWindow.setFocusable(this.interactable);
         if (this.interactable) ipcMain.send(MainEvents.EnableWidgets);
         else ipcMain.send(MainEvents.DisableWidgets);
     }
@@ -129,7 +188,7 @@ class ApplicationInstance {
             try{
                 this.AddWidget(widget, layout[widget].x, layout[widget].y);
             } catch (error) {
-                this.AppConfig.lastLayout = prevLayout;
+                this.AppConfig.LastLayout = prevLayout;
                 this.AppConfig.LastLayoutPath = prevPath;
                 this.SetLayout(prevLayout);
                 return;
@@ -151,11 +210,36 @@ class ApplicationInstance {
         fs.writeFileSync(this.Appconfig.AppState, settings, { encoding: "utf8"});
     }
     /**
+     * Change the visibility state of the applications settings window.
+     * @param {boolean} bool _(Optional)_ If true, then window will be shown. If no argument is provided then the setting window's visibility state will be toggled.
+     */
+    ShowSettings(bool) {
+        if (arguments.length > 0) {
+            (bool)? this.SettingsWindow.show() : this.SettingsWindow.hide();
+        }
+        else {
+            (this.SettingsWindow.isVisible()) ? this.SettingsWindow.hide() : this.SettingsWindow.show();
+        }
+    }
+    /**
+     * Opens or closes the Chrome Developer Tools on the widget window.
+     * @param {bool} bool _(Optional)_ If true, then Developer Tools will be opened. If no argument is given then Developer Tools will be toggled.
+     */
+    ShowDevConsole(bool) {
+        if (arguments.length > 0) {
+            (bool)? this.AppWindow.webContents.openDevTools() : this.AppWindow.webContents.closeDevTools();
+        } else {
+            let toolStatus = this.AppWindow.webContents.isDevToolsOpened();
+            (toolStatus)? this.AppWindow.webContents.closeDevTools() : this.AppWindow.webContents.openDevTools();
+        }
+    }
+    /**
      * Perform clean up actions and save the current layout and settings.
      */
     Quit() {
         this.SaveSettings();
         this.window.destroy();
+        app.quit();
     }
     /**
      * Getter for application settings.
