@@ -18,15 +18,9 @@ body.body-disabled {
     height: 100%;
 }
 
-webview {
+iframe {
+    border-style: none;
     position: absolute;
-    z-index: 90;
-}
-
-webview:hover {
-    border-style: dashed;
-    border-width: 1px;
-    border-color: black;
 }
 
 .drag-indicator {

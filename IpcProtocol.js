@@ -34,7 +34,7 @@ const ipcMainHandlersList = {
     QuitApp: {
         Message: "quit-application",
         Handler: function(event, arg) {
-            app.quit();
+            this.Quit();
         }
     },
     Test: {
@@ -46,7 +46,7 @@ const ipcMainHandlersList = {
 }
 
 /**
- * List of events sent by {@link ipcMain}.
+ * List of events that control the widget layer.
  */
 const ipcMainEventList = {
     // Tell widget layer to enable mouse events
@@ -59,9 +59,16 @@ const ipcMainEventList = {
     ClearLayout: "clear-layout",
     // Tells the widget layer to move the given widget to the given xy coordinates
     MoveWidget: "move-widget",
-    // Tells the widget layer to add a new widget
-    AddWidget: "add-widget"
+    // Event for resizing of widget
+    ResizeWidget: "resize-widget",
+    // Tells the widget layer to add a new widget. Args: widgetPath, x, y, width, height
+    AddWidget: "add-widget",
+    // Removes a widget from the widget layer. Args: widgetPath
+    RemoveWidget: "remove-widget",
+    // Locks the widget layer
+    LockWidgets: "lock-widget",
 };
+
 
 exports.MainHandlers = ipcMainHandlersList;
 exports.MainEvents = ipcMainEventList;

@@ -38,7 +38,7 @@ const DEFAULT_CONFIG = {
     ExposeNode: false,
     // Directory for storing individual widgets
     WidgetDirectory: path.join(app.getPath("documents"), "/Desktop-Deco/widgets"),
-    // Location of the config May change to the appData directory instead, not meant to be altered by the user
+    // Location of the config, may change to the appData directory instead, not meant to be altered by the user
     AppState: path.join(app.getPath("appData"), "/prefs.json"),
     // JSON representing the last layout
     LastLayout: {},
@@ -69,7 +69,13 @@ const DEFAULT_CONFIG = {
             label: 'Open Developer Tools',
             click: function (menuitem, browserWindow, event) {
                 console.log('Widget Dev Tools clicked');
-                application.SettingsWindow.webContents.openDevTools();
+                if (application.AppWindow.webContents.isDevToolsOpened()) {
+                    application.SettingsWindow.webContents.closeDevTools();
+                    application.AppWindow.webContents.closeDevTools();
+                } else {
+                    application.SettingsWindow.webContents.openDevTools();
+                    application.AppWindow.webContents.openDevTools();
+                }
             }
         }
     ]);
@@ -85,8 +91,12 @@ class ApplicationInstance {
     /**
      * Initialize an application instance. Supply the working directory with process.cwd().
      * @param {fs.pathLike} workingDir Working directory of the application.
+     * @param {boolean} isTesting Set to true to enable testing and disable any filesystem writes
      */
-    constructor(workingDir) {
+    constructor(workingDir, isTesting) {
+        if (isTesting) this.Test = true;
+        else this.Test = false;
+
         this.SettingsWindow = new BrowserWindow({
             width: 500,
             height: 700,
@@ -99,17 +109,19 @@ class ApplicationInstance {
             center: true
         });
         this.WorkingDir = workingDir;
-        this.SettingsWindow.loadFile(path.join(this.WorkingDir, "ui/SettingsWindow.html"));
         this.TrayIcon = CreateTrayMenu(this);
-
         this.Interactable = false;
         this.AppWindow = new BrowserWindow(WindowProps);
         if (platform() == "win32") win32.ignoreShowDesktop(this.AppWindow.getNativeWindowHandle());
-        this.AppWindow.loadFile(path.join(this.WorkingDir, "ui/WidgetPlane.html"));
+
+        if (!isTesting) {
+            this.AppWindow.loadFile(path.join(this.WorkingDir, "ui/WidgetPlane.html"));
+            this.SettingsWindow.loadFile(path.join(this.WorkingDir, "ui/SettingsWindow.html"));
+        }
         // Flag to allow async file reads for intial set up
         this.Starting = true;
         // Start loading widgets from loaded layout
-        if (fs.existsSync(DEFAULT_CONFIG.AppState)) {
+        if (!isTesting && fs.existsSync(DEFAULT_CONFIG.AppState)) {
             fsPromises.readFile(DEFAULT_CONFIG.AppState, {encoding: "utf8"}).then( data => {
                 this.AppConfig = JSON.parse(data);
                 this.starting = false;
@@ -129,46 +141,118 @@ class ApplicationInstance {
         this.AppWindow.show();
     }
     /**
-     * Controls whether the widget plane will recieve mouse and keyboard events.
-     * @param {boolean} event - Event object passed by an event emitter
+     * Handles the toggle edit IPC.
+     * @param {Event} event - Event object passed by an event emitter. If present, will not make an IPC call.
+     * @param {boolean} bool - _(Optional)_ If true then enable interactability, else lock the widget layer.
      */
-    ToggleEditing(event) {
+    ToggleEditingHandler(event, bool) {
+        if (arguments.length > 1) this.interactable = !bool;
         this.interactable = !this.interactable;
         this.AppWindow.setEnabled(this.interactable);
         this.AppWindow.setFocusable(this.interactable);
-        if (this.interactable) ipcMain.send(MainEvents.EnableWidgets);
+  
+    }
+    /**
+     * Controls whether the widget layer will receive mouse events.
+     * @param {Boolean} bool True to enable widget layer, false to disable. No parameters will toggle the state.
+     */
+    ToggleEditing(bool) {
+        if (arguments.length > 0) {
+            this.ToggleEditingHandler(null, bool);
+        }
+        else this.ToggleEditingHandler(null);
+        if (this.AppWindow.isEnabled()) ipcMain.send(MainEvents.EnableWidgets);
         else ipcMain.send(MainEvents.DisableWidgets);
     }
     /**
-     * Adds a widget to the main plane on the specified x or y coordinates.
-     * @param {string} widgetPath File path to the widget.
-     * @param {number} xpos X-coordinate to render the given widget.
-     * @param {number} ypos Y-coordinate to render the given widget. 
+     * Used as a handler for {@link MainEvents.AddWidget} events.
+     * @param {Event} event If present, function will not send an IPC message.
+     * @param {fs.pathLike} widgetPath File path to the widget.
+     * @param {Number} xpos _(Optional)_ X-coordinate to render the given widget.
+     * @param {Number} ypos _(Optional)_ Y-coordinate to render the given widget.
+     * @param {Number} width _(Optional)_ Width for the enclosing HTML element. Can be set to null.
+     * @param {Number} height _(Optional)_ Height for the enclosing HTML element. Can be set to null.
      */
-    AddWidget(widgetPath, xpos, ypos) {
+    AddWidgetHandler(event, widgetPath, xpos, ypos, width, height) {
         // This function may receive user-created input, error-handle here
-        let ipcArg = {
-            path: widgetPath,
-            x: (xpos) ? x : 0,
-            y: (ypos) ? y : 0
+        if (!fs.existsSync(widgetPath)) throw new Error("Widget file does not exist");
+        this.AppConfig.LastLayout[widgetPath] = {
+            x: (xpos) ? xpos : 0,
+            y: (ypos) ? ypos : 0,
+            w: (width) ? width : null,
+            h: (height) ? height : null
+        };
+    }
+    
+    /**
+     * Adds a widget to the widget layer.
+     * @param {fs.pathLike} widgetPath File path to widget.
+     * @param {Number} xpos _(Optional)_ X-coordinate to render the given widget.
+     * @param {Number} ypos _(Optional)_ Y-coordinate to render the given widget.
+     * @param {Number} width _(Optional)_ Width for the enclosing HTML element. Can be set to null.
+     * @param {Number} height _(Optional)_ Height for the enclosing HTML element. Can be set to null.
+     */
+    AddWidget(widgetPath, xpos, ypos, width, height) {
+        try {
+            this.AddWidgetHandler(null, widgetPath, xpos, ypos, width, height);
+            ipcMain.send(MainEvents.AddWidget, widgetPath, layoutRef.x, layoutRef.y, layoutRef.width, layoutRef.height);
+        } catch (e) {
+            console.log('Widget file does not exist');
         }
-        if (fs.existsSync(widgetPath)) {
-            ipcMain.send(MainEvents.AddWidget, ipcArg);
-        } else {
-            return;
-        }
-        this.AppConfig.LastLayout[widgetPath] = {x: ipcArg.x, y: ipcArg.y};
     }
     /**
-     * Sets the layout on the widget layer. Silently fails if given an invalid filepath and throws if the file is not valid JSON. This should behave atomically if it encounters errors.
+     * Handler for moving the widget.
+     * @param {Event} event If present, the function assumes it is handling an IPC event and does not send out an IPC message itself.
+     * @param {fs.pathLike} widgetPath File path of the widget.
+     * @param {Number} xpos X-position of the widget.
+     * @param {Number} ypos Y-position of the widget.
+     */
+    MoveWidgetHandler(event, widgetPath, xpos, ypos) {
+        if (!fs.existsSync(widgetPath)) return;
+        this.AppConfig.LastLayout[widgetPath].x = xpos;
+        this.AppConfig.LastLayout[widgetPath].y = ypos;
+    }
+    /**
+     * Moves a widget to the specified coordinates.
+     * @param {fs.pathLike} widgetPath File path of the widget.
+     * @param {Number} xpos X-position of the widget.
+     * @param {Number} ypos Y-position of the widget.
+     */
+    MoveWidget(widgetPath, xpos, ypos) {
+        this.MoveWidgetHandler(null, widgetPath, xpos, ypos);
+        ipcMain.send(MainEvents.MoveWidget, widgetPath, xpos, ypos);
+    }
+    /**
+     * Handles IPC requests to resize widgets
+     * @param {Event} event 
+     * @param {fs.pathLike} widgetPath Filepath to the widget.
+     * @param {Number} width Requested width.
+     * @param {Number} height Requested height.
+     */
+    ResizeWidgetHandler(event, widgetPath, width, height) {
+        if (!fs.existsSync(widgetPath)) throw new Error("Widget file does not exist");
+        this.AppConfig.LastLayout[widgetPath].w = width;
+        this.AppConfig.LastLayout[widgetPath].h = height;
+    }
+    /**
+     * Resizes the specified widget.
+     * @param {fs.pathLike} widgetPath Filepath to the widget.
+     * @param {Number} width Requested width.
+     * @param {Number} height Requested height.
+     */
+    ResizeWidget(widgetPath, width, height) {
+        this.ResizeWidgetHandler(null, widgetPath, width, height);
+        ipcMain.send(MainEvents.ResizeWidget, widgetPath, width, height);
+    }
+    /**
+     * Handles IPC requests to set the layout of the widget layer.
      * @param {object|fs.pathLike} layout Either a JSON describing the layout of widgets or a path to a layout file. If argument is a JSON, use widget paths as the key and have each key contain an object with x and y coordinates as properties.
      */
     SetLayout(layout) {
         // This function may receive user-created input, error-handle here
         let prevLayout = this.AppConfig.LastLayout;
         let prevPath = this.AppConfig.LastLayoutPath;
-        // Check if argument is string
-        if (layout.toUpperCase && fs.existsSync(layout)) {
+        if (fs.existsSync(layout)) {
             let file = fs.readFileSync(layout, {encoding:"utf8"});
             try {
                 this.AppConfig.LastLayout = JSON.parse(file);
@@ -180,13 +264,13 @@ class ApplicationInstance {
         } else {
             this.AppConfig.LastLayout = layout;
             this.AppConfig.LastLayoutPath = null;
+            return;
         }
-
         ipcMain.send(MainEvents.ClearLayout);
 
         for (let widget in Object.keys(layout)) {
             try{
-                this.AddWidget(widget, layout[widget].x, layout[widget].y);
+                this.AddWidget( widget, layout[widget].x, layout[widget].y, layout[widget].w, layout[widget].h);
             } catch (error) {
                 this.AppConfig.LastLayout = prevLayout;
                 this.AppConfig.LastLayoutPath = prevPath;
@@ -206,6 +290,10 @@ class ApplicationInstance {
      * Saves the current settings to disk.
      */
     SaveSettings() {
+        if (this.Test) {
+            console.log('Settings Saved.');
+            return;
+        }
         let settings = JSON.stringify(this.AppConfig);
         fs.writeFileSync(this.Appconfig.AppState, settings, { encoding: "utf8"});
     }
@@ -225,7 +313,7 @@ class ApplicationInstance {
      * Opens or closes the Chrome Developer Tools on the widget window.
      * @param {bool} bool _(Optional)_ If true, then Developer Tools will be opened. If no argument is given then Developer Tools will be toggled.
      */
-    ShowDevConsole(bool) {
+    ShowDevConsole(event, bool) {
         if (arguments.length > 0) {
             (bool)? this.AppWindow.webContents.openDevTools() : this.AppWindow.webContents.closeDevTools();
         } else {
@@ -236,7 +324,7 @@ class ApplicationInstance {
     /**
      * Perform clean up actions and save the current layout and settings.
      */
-    Quit() {
+    Quit(event) {
         this.SaveSettings();
         this.window.destroy();
         app.quit();

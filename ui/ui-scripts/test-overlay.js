@@ -2,6 +2,7 @@
 
 let frame = document.querySelector('body');
 
+// Create a grid with visible lines
 function populateGrid(columns, rows, frameElement) {
     console.log('populateGrid called');
     for (let idx = 0; idx < rows; idx++) {
